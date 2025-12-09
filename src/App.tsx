@@ -11,8 +11,7 @@ function App() {
   const [presentationUrl, setPresentationUrl] = useState<string | null>(null)
 
   const apiBaseUrl = useMemo(() => {
-    const val = (import.meta as any).env?.VITE_API_BASE_URL as string | undefined
-    return val && val.length > 0 ? val : 'http://localhost:8080'
+    return import.meta.env.VITE_API_BASE_URL
   }, [])
 
   const canSubmit = useMemo(() => {
