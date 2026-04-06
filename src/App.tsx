@@ -8,7 +8,6 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [presentationUrl, setPresentationUrl] = useState<string | null>(null)
 
   const apiBaseUrl = useMemo(() => {
     return import.meta.env.VITE_API_BASE_URL
@@ -29,7 +28,6 @@ function App() {
     e.preventDefault()
     setMessage(null)
     setError(null)
-    setPresentationUrl(null)
 
     const num = typeof slidesLength === 'number' ? slidesLength : NaN
     if (!presentationTitle.trim()) {
@@ -60,46 +58,26 @@ function App() {
         throw new Error(text || `Помилка запиту: ${res.status}`)
       }
 
-      // Try to parse response and extract the presentation URL
-      let url: string | null = null
-      try {
-        const data = await res.json()
-        if (data) {
-          // Common shapes
-          if (typeof data.presentationUrl === 'string') {
-            url = data.presentationUrl
-          } else if (data.presentationUrl && typeof data.presentationUrl.url === 'string') {
-            url = data.presentationUrl.url
-          } else if (data.presentationUrl && typeof data.presentationUrl.link === 'string') {
-            url = data.presentationUrl.link
-          } else if (data.presentationUrl && typeof data.presentationUrl.href === 'string') {
-            url = data.presentationUrl.href
-          } else if (typeof data.presentationULR === 'string') { // tolerate possible typo in property/type
-            url = data.presentationULR
-          } else if (data.presentationULR && typeof data.presentationULR.url === 'string') {
-            url = data.presentationULR.url
-          } else if (typeof data.url === 'string') {
-            url = data.url
-          } else if (typeof data.link === 'string') {
-            url = data.link
-          } else if (typeof data.href === 'string') {
-            url = data.href
-          } else if (data.presentationUrl && typeof data.presentationUrl === 'object') {
-            // Fallback: pick first string prop
-            const firstString = Object.values(data.presentationUrl).find((v: any) => typeof v === 'string')
-            if (typeof firstString === 'string') url = firstString
-          }
-        }
-      } catch (_) {
-        // ignore JSON parse issues
-      }
+      const blob = await res.blob()
 
-      if (url) {
-        setPresentationUrl(url)
-        setMessage('Презентацію успішно згенеровано!')
-      } else {
-        setMessage('Презентацію успішно згенеровано! Посилання не отримано.')
-      }
+      const now = new Date()
+      const timestamp = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+        String(now.getHours()).padStart(2, '0'),
+        String(now.getMinutes()).padStart(2, '0'),
+      ].join('-')
+      const filename = `${presentationTitle.trim()}_${timestamp}.pptx`
+
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(objectUrl)
+
+      setMessage('Презентацію успішно згенеровано!')
 
       setPresentationTitle('')
       setSlidesLength('')
@@ -161,29 +139,8 @@ function App() {
             />
           </div>
 
-          <div className="helper-links">
-            <a
-              href="https://drive.google.com/drive/folders/1BNVXBnHOyPdZtdhYfdaXYk2zDeJFTMrP?hl=ru"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Всі презентації на Google Drive
-            </a>
-          </div>
-
           {error && <div className="alert error">{error}</div>}
-          {message && (
-            <div className="alert success">
-              <div>{message}</div>
-              {presentationUrl && (
-                <div style={{ marginTop: 8 }}>
-                  <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
-                    Відкрити згенеровану презентацію
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
+          {message && <div className="alert success">{message}</div>}
 
           <button type="submit" className="primary" disabled={!canSubmit}>
             {loading ? (
