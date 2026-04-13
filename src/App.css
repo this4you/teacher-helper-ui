@@ -87,6 +87,26 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
+/* Checkboxes */
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-field label {
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #646cff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* Buttons */
 button.primary {
   display: inline-flex;

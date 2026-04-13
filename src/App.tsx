@@ -1,17 +1,17 @@
 import { type FormEvent, useMemo, useState } from 'react'
+import { generatePresentation } from './api/presentationApi.ts'
+import type { PresentationGenerationRequest } from './api/types.ts'
 import './App.css'
 
 function App() {
   const [presentationTitle, setPresentationTitle] = useState('')
   const [slidesLength, setSlidesLength] = useState<number | ''>('')
   const [additionalContext, setAdditionalContext] = useState('')
+  const [isDefaultTheme, setIsDefaultTheme] = useState(false)
+  const [generateSpeakerNotes, setGenerateSpeakerNotes] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const apiBaseUrl = useMemo(() => {
-    return import.meta.env.VITE_API_BASE_URL
-  }, [])
 
   const canSubmit = useMemo(() => {
     const num = typeof slidesLength === 'number' ? slidesLength : NaN
@@ -41,34 +41,16 @@ function App() {
 
     try {
       setLoading(true)
-      const res = await fetch(`${apiBaseUrl}/presentation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          presentationTitle: presentationTitle.trim(),
-          slidesLength: String(num),
-          additionalContext: additionalContext.trim(),
-        }),
-      })
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => '')
-        throw new Error(text || `Помилка запиту: ${res.status}`)
+      const request: PresentationGenerationRequest = {
+        presentationTitle: presentationTitle.trim(),
+        slidesLength: num,
+        additionalContext: additionalContext.trim(),
+        isDefaultTheme,
+        generateSpeakerNotes,
       }
 
-      const blob = await res.blob()
-
-      const now = new Date()
-      const timestamp = [
-        now.getFullYear(),
-        String(now.getMonth() + 1).padStart(2, '0'),
-        String(now.getDate()).padStart(2, '0'),
-        String(now.getHours()).padStart(2, '0'),
-        String(now.getMinutes()).padStart(2, '0'),
-      ].join('-')
-      const filename = `${presentationTitle.trim()}_${timestamp}.pptx`
+      const { blob, filename } = await generatePresentation(request)
 
       const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -82,8 +64,11 @@ function App() {
       setPresentationTitle('')
       setSlidesLength('')
       setAdditionalContext('')
-    } catch (err: any) {
-      setError(err?.message || 'Щось пішло не так. Спробуйте ще раз.')
+      setIsDefaultTheme(false)
+      setGenerateSpeakerNotes(false)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Щось пішло не так. Спробуйте ще раз.'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -137,6 +122,28 @@ function App() {
               disabled={loading}
               rows={4}
             />
+          </div>
+
+          <div className="checkbox-field">
+            <input
+              id="defaultTheme"
+              type="checkbox"
+              checked={isDefaultTheme}
+              onChange={(e) => setIsDefaultTheme(e.target.checked)}
+              disabled={loading}
+            />
+            <label htmlFor="defaultTheme">Використати стандартну тему</label>
+          </div>
+
+          <div className="checkbox-field">
+            <input
+              id="speakerNotes"
+              type="checkbox"
+              checked={generateSpeakerNotes}
+              onChange={(e) => setGenerateSpeakerNotes(e.target.checked)}
+              disabled={loading}
+            />
+            <label htmlFor="speakerNotes">Згенерувати скрипт викладача</label>
           </div>
 
           {error && <div className="alert error">{error}</div>}
